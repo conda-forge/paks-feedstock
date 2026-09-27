@@ -13,17 +13,15 @@ build:
   number: 1
   script:
     env:
-      AWS_LC_SYS_CMAKE_BUILDER: ${{ "1" if host_platform == "win-arm64" else "0" }} # force CMake builder for `aws-lc-sys` native C/C++ code on `win-arm64`
+      AWS_LC_SYS_CMAKE_BUILDER: ${{ "1" if win else "0" }} # force CMake builder for `aws-lc-sys` native C/C++ code on Windows
       CARGO_PROFILE_RELEASE_LTO: fat
       CARGO_PROFILE_RELEASE_STRIP: symbols
+    interpreter: nu
     content:
+      - let prefix = $env.LIBRARY_PREFIX? | default $env.PREFIX
+      # build main app and generate license data
       - cd apps/cli
-      - if: unix
-        then:
-          - cargo auditable install --path=. --root="$PREFIX" --no-track --locked --bins
-      - if: win
-        then:
-          - cargo auditable install --path=. --root="%LIBRARY_PREFIX%" --no-track --locked --bins
+      - cargo auditable install --path=. --root=($prefix) --no-track --locked --bins
       - cargo-bundle-licenses --format=yaml --output=../../THIRDPARTY.yml
 
 requirements:
@@ -33,7 +31,9 @@ requirements:
     - ${{ compiler('rust') }}
     - cargo-auditable
     - cargo-bundle-licenses
-    - cmake
+    - nushell
+    - if: win
+      then: cmake
 
 tests:
   - script:
